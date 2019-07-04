@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Client.Extensions;
 using Client.HttpClients;
+using Client.HttpHandlers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -33,18 +34,25 @@ namespace Client
         {
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
 
+            // Named client
             //services.AddHttpClient("CustomerService", client =>
             //{
             //    client.BaseAddress = new Uri("http://localhost:6001/");
             //    client.DefaultRequestHeaders.Add("Accept", "application/json");
             //});
 
-            services.AddHttpClient<CustomerClient>(client => client.BaseAddress = new Uri("http://localhost:6000"))
-                .AddPolicyHandlers(LoggerFactory, "PollyPolicyConfig", Configuration);
+            // Typed client with extension method
+            //services.AddHttpClient<CustomerClient>(client => client.BaseAddress = new Uri("http://localhost:6000"))
+            //    .AddPolicyHandlers(LoggerFactory, "PollyPolicyConfig", Configuration);
 
+            // Typed client with inline configuration
+            //services.AddHttpClient<CustomerClient>(client => client.BaseAddress = new Uri("http://localhost:6000"))
+            //    .AddTransientHttpErrorPolicy(builder => builder.WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))));
 
-            services.AddHttpClient<CustomerClient>(client => client.BaseAddress = new Uri("http://localhost:6000"))
-                .AddTransientHttpErrorPolicy(builder => builder.WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))));
+            // Typed client with HttpMessageHandler
+            services.AddTransient<PollyMessageHandler>();
+            services.AddHttpClient<CustomerClient>()
+                .AddHttpMessageHandler<PollyMessageHandler>();
 
             services.AddLogging(loggingBuilder =>
                 loggingBuilder.AddSerilog(dispose: true));
