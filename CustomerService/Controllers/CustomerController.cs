@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 
 namespace CustomerService.Controllers
 {
@@ -50,6 +51,7 @@ namespace CustomerService.Controllers
         [HttpGet("list")]
         public IEnumerable<CustomerDTO> List()
         {
+            Thread.Sleep(2000000);
             throw new TimeoutException();
         }
 

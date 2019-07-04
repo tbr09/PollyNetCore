@@ -2,6 +2,7 @@
 using Client.DTO;
 using Microsoft.AspNetCore.Mvc;
 using Polly;
+using Polly.Bulkhead;
 using Polly.CircuitBreaker;
 using RestEase;
 using System;
@@ -34,6 +35,12 @@ namespace Client.Controllers
                         Serilog.Log.Information("onReset");
                         Debug.WriteLine("onReset");
                     });
+
+        private static AsyncBulkheadPolicy bulkHeadPolicy = Policy
+              .BulkheadAsync(4, 2, onBulkheadRejectedAsync: async (context) =>
+              {
+                  Serilog.Log.Warning($"Bulkhead rejected: {context.PolicyKey}");
+              });
 
         public CustomerController()
         {
@@ -84,6 +91,29 @@ namespace Client.Controllers
                 {
                     return await customerService.List();
                 });
+        }
+
+        [HttpGet("list/timeout")]
+        public async Task<IEnumerable<CustomerDTO>> ListTimeout()
+        {
+            return await Policy
+              .TimeoutAsync(30, onTimeoutAsync: async (context, timespan, task) =>
+              {
+                  Serilog.Log.Warning($"{context.PolicyKey}: Execution timed out after {timespan.TotalSeconds} seconds.");
+              })
+              .ExecuteAsync(async () =>
+              {
+                  return await customerService.List();
+              });
+        }
+
+        [HttpGet("list/bulkhead")]
+        public async Task<IEnumerable<CustomerDTO>> ListBulkhead()
+        {
+            return await bulkHeadPolicy.ExecuteAsync(async () =>
+              {
+                  return await customerService.List();
+              });
         }
 
         [HttpGet("list")]
